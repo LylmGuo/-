@@ -83,3 +83,53 @@ autoNorm()步骤：
 3. 计算每一行的值到最小值的距离/范围，使得结果落到(0,1)之间，获得归一化的结果
 4. 返回此归一化后的结果，范围和最小值
 """
+
+def datingClassTest():
+    hoRatio = 0.10 #测试集百分比
+    dataingDataMat, dataingLabels = file2matrix("datingTestSet2.txt") #读取文件，获得训练集的特征和分类
+    normMat, ranges, minVals = autoNorm(datingDataMat) #对数据进行归一化处理
+    m = normMat.shape[0] #获取数据的行数
+    numTestVecs = int(m*hoRatio) #确定测试集数量
+    errorCount = 0.0
+    for i in range(numTestVecs):  #循环测试集的数量
+        classifierResult = classify0(normMat[i,:],normMat[numTestVecs:m,:],datingLabels[numTestVecs:m],3)  
+        #分类归一化后的第i行数据，训练样本集（从numTestVecs到m行的数据） normMat[numTestVecs:m,:] 后900行为训练集，前100行为测试集
+        #print("the classifier came back with: %d, the real answer is: %d" % (classifierResult, datingLabels[i]))
+        if (classifierResult != datingLabels[i]):errorCount += 1.0
+    #print("the total error rate is: %f" % (errorCount/float(numTestVecs)))
+    errorRate = errorCount/float(numTestVecs)
+    #accuracy = 1 - errorRate
+    #print(accuracy)
+    return errorRate
+"""
+datingClassTest()步骤：
+1. 读取文件，获得训练集的特征和分类
+2. 对训练集的特征进行归一化处理
+3. 根据百分比确定测试集数量
+4. 循环对测试集进行分类（输入需测试的向量、训练集特征&标签及k值）
+5. 对比测试集使用算法进行分类的结果和真正的分类的区别，计算错误率
+6. 返回错误率
+"""
+
+
+def classifyPerson():
+    resultList = ['not at all','in small doses', 'in large doses']
+    percentTats = float(input("percentage of time spent playing video games?"))
+    ffMiles = float(input("frequent flier miles earned per year?"))
+    iceCream = float(input("liters of ice cream consumed per year?"))
+    datingDataMat, datingLabels = file2matrix('datingTestSet2.txt')
+    normMat,ranges,minVals = autoNorm(datingDataMat) #对训练集特征进行归一化处理
+    inArr = array([ffMiles,percentTats,iceCream]) #将用户输入的转成array
+    classifierResult = classify0((inArr-minVals)/ranges,normMat,datingLabels,3) #(inArr-minVals)/ranges 归一化
+    print("You will probably like this person: ",resultList[classifierResult - 1])
+
+
+"""
+classifyPerson()步骤：
+1. 让用户在console输入三个特征数值
+2. 获得训练集的特征&标签
+3. 对训练集特征进行归一化处理
+4. 将用户输入的转成array形式
+5. 对用户输入进行归一化处理后进行分类
+6. 打印分类结果的自然语言形式
+"""
