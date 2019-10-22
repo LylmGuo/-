@@ -133,3 +133,54 @@ classifyPerson()步骤：
 5. 对用户输入进行归一化处理后进行分类
 6. 打印分类结果的自然语言形式
 """
+
+def img2vector(filename):  #文件是一个32x32的二进制图像矩阵，要转换为1x1024的向量
+    returnVect = zeros((1,1024)) #构建shape为（1,1024）的全为零的array
+    #fr = open(filename)
+    with open(filename) as fr:
+        for i in range(32):
+            lineStr = fr.readline() #一个循环读文件的一行
+            for j in range(32): 
+                returnVect[0,32*i+j] = int(lineStr[j])  #一个循环赋值给returnVect，第1行的第32*i+j个位置是文件i+1行的j+1位数字
+    return returnVect
+"""
+img2vector()步骤：  
+1. 新建一个1*1024的全为零的array
+2. 按行读取32*32的二进制图像矩阵，并将其数值按顺序赋值给步骤1中新建的array
+3. 返回该array
+"""
+def handwritingClassTest(): #测试算法，计算错误率
+    hwLabels = []
+    trainingFileList = listdir('trainingDigits') #获取目录内容，即是文件名的list
+    m = len(trainingFileList)
+    trainingMat = zeros((m,1024)) #文件名有m个 构建m行，1024列的全为零的array
+    for i in range(m):
+        fileNameStr = trainingFileList[i] #获取文件名
+        fileStr = fileNameStr.split('.')[0] #将文件名和后缀以“.”分隔，取名，去后缀，[0]表示是第一个分隔开的字符
+        classNumStr = int(fileStr.split('_')[0]) #将文件名中数字摘出 所表示的数字是以“_”分隔的，，int(),将他变为整数
+        hwLabels.append(classNumStr) #将Label存入list中
+        trainingMat[i,:] = img2vector('trainingDigits/%s' % fileNameStr) #给出filename，用函数将img转为vector，放入第i行中
+    testFileList = listdir('testDigits')  #测试集做同样操作
+    errorCount = 0.0
+    mTest = len(testFileList)
+    for i in range(mTest):
+        fileNameStr = testFileList[i]
+        fileStr = fileNameStr.split('.')[0]
+        classNumStr = int(fileStr.split('_')[0])
+        vectorUnderTest = img2vector('testDigits/%s' % fileNameStr)
+        classifierResult = classify0(vectorUnderTest, trainingMat,hwLabels,3)  #knn只需在测试的时候，输入测试的【单条】数据，使用训练集作为训练矩阵来判断其准确率
+        print("the classifier came back with: %d, the real answer is: %d"%(classifierResult,classNumStr))
+        if (classifierResult != classNumStr):errorCount += 1.0 #单行if的写法，条件加括号
+    print("\nthe total number of errors is: %d" % errorCount)
+    print("\nthe total error rate is: {}".format(errorCount/float(mTest)))
+"""
+handwritingClassTest()步骤：
+1. 获取目录下的所有文件名，计算文件数量，记为m
+2. 构建m行，1024列的全为零的array
+3. 获取训练集文件名中表示该二进制图像所示的数字，记为classNumStr
+4. 读取训练集文件，传到img2vector()函数，获取1*1024的array
+5. 对测试集进行与步骤3,4相同的操作
+6. 使用classify0()函数对测试集中的每项二进制图像进行分类
+7. 若分类错误，记录错误次数。
+8. 计算并打印错误率
+"""
