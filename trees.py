@@ -68,6 +68,7 @@ def chooseBestFeatureToSplit(dataSet): #dataSet每一行的最后一列必须为
             bestFeature = i #若满足条件 最好的特征就是第i个特征
     return bestFeature
 #循环，遍历特征；遍历到某特征后，假设按其划分，要循环计算子集中不同种类（即不同value）的信息熵和信息增益；综上，来确定哪个特征来分类最好
+
 """
 chooseBestFeatureToSplit()步骤：
 1. 计算有多少个特征（dataSet中除去最后一列都是特征列）
@@ -81,3 +82,75 @@ chooseBestFeatureToSplit()步骤：
 9. 比较信息增益和最好信息增益，若本次信息增益较大，则存为最好信息增益，该特征存为最优特征
 10. 循环结束后，返回最优特征
 """
+
+def majorityCnt(classList): #统计classList出现次数最多的类，将其视为该类的名称，返回名称
+    classCount={}
+    for vote in classList:
+        if vote not in classCount.keys():classCount[vote] = 0
+        classCount[vote] += 1
+    sortedClassCount = sorted(classCount.iteritems(),key=operator.itemgetter(1),reverse = True) #按字典第二元素降序排列，即出现次数最多降序排列
+    return sortedClassCount[0][0]
+"""
+majorityCnt()步骤：
+1. 新建空字典classCount用于储存每个类出现的次数
+2. 循环classList，如果某项不存在于classCount中，添加到classCount中，初始值设为0，若存在则跳过，每次循环classCount相应键的值都+1
+3. 按字典中的第二项进行从高到低的排序，即按出现次数从多到少排序
+4. 返回出现次数最多的项的键，该键被视为预测出的分类的名称
+"""
+
+def createTree(dataSet,labels): #此处的labels其实是特征的名称
+    classList = [example[-1] for example in dataSet] #把dataSet最后一列找出，放入list中
+    if classList.count(classList[0])==len(classList):return classList[0] 
+    #类别相同，停止划分 .count(classList[0])--计算第一项在list中出现次数，若出现次数等于列表的数量，则停止划分，并返回classList第一项
+    if len(dataSet[0]) == 1: #如果数据集中只剩下分类列，计算该特征下出现最多的分类值，返回该分类的值
+        return majorityCnt(classList)
+    bestFeat = chooseBestFeatureToSplit(dataSet) #计算出用于划分的最好特征的位置
+    bestFeatLabel = labels[bestFeat] #最好特征
+    myTree = {bestFeatLabel:{}}
+    del(labels[bestFeat])  #del()取消变量对值的引用
+    featValues = [example[bestFeat] for example in dataSet] #取出最好特征的位置的所有值
+    uniqueVals = set(featValues) #去重
+    for value in uniqueVals:
+        subLabels = labels[:] #在del去掉最好特征后，将剩下的特征（即flippers），放到subLabels里
+        myTree[bestFeatLabel][value] = createTree(splitDataSet(dataSet,bestFeat,value),subLabels)  #递归，按value划分dataSet，然后按subLabels来建树
+    return myTree  
+#叶子节点--没有子节点的节点
+#使用完了所有特征，仍然不能将数据集划分成仅包含唯一类别的分组
+"""
+createTree()步骤：
+1. 加数据集中表示分类的列的所有项取出放入classList
+2. 第一个跳出函数（即直接return）的条件：计算classList中第一项在整个classList中出现次数是否与dataSet的行数一致，若一致即此dataSet中的分类完全一致，
+直接返回classList第一项作为树的叶子节点
+3. 第二个跳出函数（即直接return）的条件： 如果数据集中只剩下分类列，返回分类中出现最多次的分类值
+4. 使用chooseBestFeatureToSplit计算出用于划分的最好特征的位置，然后对应下标获取最好特征值
+5. 构建树，将最好特征作为键，空字典作为值
+6. 在labels中删除该最好特征
+7. 取出最好特征的位置的所有值，存为featValues，并去重存为uniqueVals
+8. myTree的最好特征下的字典的键是 【value】 即 【最好特征的其中一个值】；
+    myTree的最好特征下的字典的值是 通过递归调用createTree，获得返回值可能是Tree，也可能是叶子节点
+    如何调用createTree：先调用splitDataSet()--传入dataSet，bestFeat，value来获得去除了最好特征列和不等于value的行的子数据集；
+                        再调用createTree()传入这个子数据集和去除了最优特征的subLabels列表
+"""
+
+
+def classify(inputTree,featLabels,testVec):  #输入树（此处，树是已经进行了特征分类的结果），标签，和测试集
+    firstStr = list(inputTree.keys())[0]
+    secondDict = inputTree[firstStr]
+    featIndex = featLabels.index(firstStr)  #列表.index(查找元素) 返回所查找元素所在的位置
+    for key in list(secondDict.keys()):
+        if testVec[featIndex] == key:
+            if type(secondDict[key]).__name__ == 'dict':
+                classLabel = classify(secondDict[key],featLabels,testVec)
+            else:classLabel = secondDict[key]
+    return classLabel
+
+def storeTree(inputTree,filename): #储存树模型
+    import pickle
+    fw = open(filename,'wb') #python3 必须要写出“b”才会是bytes的形式
+    pickle.dump(inputTree,fw)
+    fw.close()
+
+def grabTree(filename): #加载树模型
+    import pickle
+    fr = open(filename,'rb') 
+    return pickle.load(fr)   
